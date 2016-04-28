@@ -1,0 +1,68 @@
+extern crate clap;
+
+use std::io::prelude::*;
+use std::fs::File;
+use serde_json::Value;
+use clap::{App, AppSettings, Arg};
+
+
+fn parse_timeline(path: &str) -> Value {
+  let mut source = File::open(path).unwrap();
+  let mut raw    = String::new();
+
+  source.read_to_string(&mut raw).unwrap();
+  let data: Value = serde_json::from_str(&raw).unwrap();
+  data
+}
+
+#[derive(Debug)]
+struct Screenshot<'a> {
+  data: &'a str
+}
+
+fn parse_screenshot<'a>(candidate: &'a Value) -> Option<Screenshot<'a>> {
+  match candidate.find("name") {
+    Some(name) => match name.as_string() {
+      Some("Screenshot") => Some(
+        Screenshot {
+            data: &candidate.lookup("args.snapshot").unwrap().as_string().unwrap()
+        }),
+        _ => None
+    ),
+    _ => None
+  }
+}
+
+fn main() {
+  let matches = App::new("timeline")
+                      .version("0.1.0")
+                      .author("Steven Sloan <stevenosloan@gmail.com")
+                      .about("Generate a gif from Chrome timeline data")
+                      .setting(AppSettings::ArgRequiredElseHelp)
+                      .arg(Arg::with_name("input")
+                                  .help("timeline file")
+                                  .index(1)
+                                  .required(true))
+                      .arg(Arg::with_name("output")
+                                  .help("output file (default is INPUT.gif")
+                                  .takes_value(true)
+                                  .short("o")
+                                  .long("output"))
+                      .get_matches();
+
+  let input = matches.value_of("input").unwrap();
+  println!("Doing real work with file: {}", input);
+
+  let timeline = parse_timeline(input);
+  println!("array? {}", timeline.is_array());
+
+  let filtered = timeline.as_array()
+                         .unwrap()
+                         .iter()
+                         .filter_map(|s| parse_screenshot(s));
+
+
+  for screen in filtered {
+    println!("filtered: {:?}", screen);
+  }
+}
