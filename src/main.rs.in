@@ -1,10 +1,20 @@
 extern crate clap;
+extern crate image;
+extern crate tempfile;
+extern crate base64;
+extern crate rustc_serialize;
+extern crate encoding;
 
+use std::str;
 use std::io::prelude::*;
 use std::fs::File;
 use serde_json::Value;
+use std::iter::FromIterator;
 use clap::{App, AppSettings, Arg};
-
+use image::{DynamicImage, GenericImage};
+use rustc_serialize::base64::FromBase64;
+use encoding::{Encoding, DecoderTrap};
+use encoding::all::UTF_8;
 
 fn parse_timeline(path: &str) -> Value {
   let mut source = File::open(path).unwrap();
@@ -15,19 +25,48 @@ fn parse_timeline(path: &str) -> Value {
   data
 }
 
-#[derive(Debug)]
-struct Screenshot<'a> {
-  data: &'a str
+struct Screenshot {
+  decoded: Option<DynamicImage>,
 }
 
-fn parse_screenshot<'a>(candidate: &'a Value) -> Option<Screenshot<'a>> {
+impl Screenshot {
+  pub fn new(data: &str) -> Screenshot {
+    Screenshot {
+      decoded: Screenshot::str_to_img(data),
+    }
+  }
+
+  fn str_to_img(data: &str) -> Option<DynamicImage> {
+    match data.from_base64() {
+      Ok(bytes) => {
+        match image::load_from_memory_with_format(&bytes[..],
+                                                  image::ImageFormat::JPEG) {
+
+          Ok(img) => { Some(img) },
+          Err(reason) => {
+            println!("{:?}", reason);
+            None
+          }
+        }
+      },
+      Err(reason) => {
+        println!("{:?}", reason);
+        None
+      },
+    }
+  }
+}
+
+fn parse_screenshot(candidate: &Value) -> Option<Screenshot> {
   match candidate.find("name") {
     Some(name) => match name.as_string() {
       Some("Screenshot") => Some(
-        Screenshot {
-            data: &candidate.lookup("args.snapshot").unwrap().as_string().unwrap()
-        }),
-        _ => None
+        Screenshot::new(&candidate.lookup("args.snapshot")
+                                  .unwrap()
+                                  .as_string()
+                                  .unwrap())
+      ),
+      _ => None,
     ),
     _ => None
   }
@@ -54,15 +93,24 @@ fn main() {
   println!("Doing real work with file: {}", input);
 
   let timeline = parse_timeline(input);
-  println!("array? {}", timeline.is_array());
-
-  let filtered = timeline.as_array()
+  let mut filtered = timeline.as_array()
                          .unwrap()
                          .iter()
                          .filter_map(|s| parse_screenshot(s));
 
 
-  for screen in filtered {
-    println!("filtered: {:?}", screen);
+  let mut done = false;
+  while !done {
+    match filtered.next() {
+      Some(screen) => {
+        match screen.decoded {
+          Some(img) => {
+            println!("dimensions: {}x{}", img.width(), img.height());
+          },
+          None => {},
+        }
+      },
+      None => { done = true; }
+    }
   }
 }
