@@ -4,17 +4,16 @@ extern crate gif;
 extern crate tempfile;
 extern crate rustc_serialize;
 extern crate encoding;
+extern crate regex;
 
-use std::str;
+use regex::Regex;
 use std::io::prelude::*;
 use std::fs::File;
 use serde_json::Value;
-use std::iter::FromIterator;
 use clap::{App, AppSettings, Arg};
 use image::{DynamicImage, GenericImage};
 use rustc_serialize::base64::FromBase64;
-use encoding::{Encoding, DecoderTrap};
-use encoding::all::UTF_8;
+
 
 fn parse_timeline(path: &str) -> Value {
   let mut source = File::open(path).unwrap();
@@ -45,6 +44,11 @@ impl Screenshot {
 
   pub fn height(&self) -> u16 {
     self.decoded.height() as u16
+  }
+
+  pub fn as_frame(&self) -> gif::Frame {
+    let mut pixels = self.decoded.raw_pixels();
+    gif::Frame::from_rgb( self.width(), self.height(), &mut *pixels )
   }
 
   fn str_to_img(data: &str) -> Option<DynamicImage> {
@@ -101,7 +105,20 @@ fn main() {
                       .get_matches();
 
   let input = matches.value_of("input").unwrap();
-  println!("Doing real work with file: {}", input);
+  println!("Generating timeline gif for: {}", input);
+
+
+  let output = match matches.value_of("output") {
+    Some(output) => {
+        String::from(output)
+    },
+    None => {
+      let re = Regex::new(r"\.json$").unwrap();
+      let result = re.replace(input, ".gif");
+      result
+    },
+  };
+  println!("Will output to: {}", output);
 
   let timeline = parse_timeline(input);
   let mut filtered = timeline.as_array()
@@ -110,13 +127,29 @@ fn main() {
                          .filter_map(|s| parse_screenshot(s));
 
 
-  let mut done = false;
-  while !done {
-    match filtered.next() {
-      Some(screen) => {
-        println!("dimensions: {}x{}", screen.width(), screen.height());
-      },
-      None => { done = true; }
+  match filtered.next() {
+    Some(first_screen) => {
+      let mut done = false;
+      let mut out_gif = File::create(output).unwrap();
+      let first_frame = first_screen.as_frame();
+      let mut encoder = gif::Encoder::new(&mut out_gif, first_frame.width, first_frame.width, &[]).unwrap();
+
+      encoder.write_frame(&first_frame).unwrap();
+
+      while !done {
+        match filtered.next() {
+          Some(screen) => {
+            println!("adding frame w/ dimensions: {}x{}", screen.width(), screen.height());
+            encoder.write_frame(&screen.as_frame()).unwrap();
+          },
+          None => { done = true; }
+        }
+      }
+    },
+    None => {
+      println!("there was no frame?!");
     }
   }
+
+
 }
