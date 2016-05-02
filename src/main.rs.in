@@ -1,7 +1,7 @@
 extern crate clap;
 extern crate image;
+extern crate gif;
 extern crate tempfile;
-extern crate base64;
 extern crate rustc_serialize;
 extern crate encoding;
 
@@ -26,14 +26,25 @@ fn parse_timeline(path: &str) -> Value {
 }
 
 struct Screenshot {
-  decoded: Option<DynamicImage>,
+  decoded: DynamicImage,
 }
 
 impl Screenshot {
-  pub fn new(data: &str) -> Screenshot {
-    Screenshot {
-      decoded: Screenshot::str_to_img(data),
+  pub fn new(data: &str) -> Option<Screenshot> {
+    match Screenshot::str_to_img(data) {
+      Some(img) => {
+        Some(Screenshot { decoded: img })
+      },
+      None => { None }
     }
+  }
+
+  pub fn width(&self) -> u16 {
+    self.decoded.width() as u16
+  }
+
+  pub fn height(&self) -> u16 {
+    self.decoded.height() as u16
   }
 
   fn str_to_img(data: &str) -> Option<DynamicImage> {
@@ -60,14 +71,14 @@ impl Screenshot {
 fn parse_screenshot(candidate: &Value) -> Option<Screenshot> {
   match candidate.find("name") {
     Some(name) => match name.as_string() {
-      Some("Screenshot") => Some(
+      Some("Screenshot") => {
         Screenshot::new(&candidate.lookup("args.snapshot")
                                   .unwrap()
                                   .as_string()
                                   .unwrap())
-      ),
+      },
       _ => None,
-    ),
+    },
     _ => None
   }
 }
@@ -103,12 +114,7 @@ fn main() {
   while !done {
     match filtered.next() {
       Some(screen) => {
-        match screen.decoded {
-          Some(img) => {
-            println!("dimensions: {}x{}", img.width(), img.height());
-          },
-          None => {},
-        }
+        println!("dimensions: {}x{}", screen.width(), screen.height());
       },
       None => { done = true; }
     }
