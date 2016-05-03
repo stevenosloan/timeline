@@ -1,7 +1,6 @@
 extern crate clap;
 extern crate image;
 extern crate gif;
-extern crate tempfile;
 extern crate rustc_serialize;
 extern crate encoding;
 extern crate regex;
