@@ -5,8 +5,8 @@ authors = ["Steven Sloan <stevenosloan@gmail.com>"]
 build = "build.rs"
 
 [build-dependencies]
-serde_codegen = "*"
-syntex        = "*"
+serde_codegen = "0.7.2"
+syntex        = "0.32.0"
 
 [dependencies]
 clap       = "2.2.1"
@@ -14,7 +14,7 @@ serde      = "0.7.0"
 serde_json = "0.7.0"
 image      = "0.9.0"
 gif        = "0.8.0"
+encoding   = "0.2"
+regex      = "*"
 tempfile   = "*"
 rustc-serialize = "0.3"
-encoding = "0.2"
-regex = "*"
