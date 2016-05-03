@@ -1,20 +1,31 @@
 language: rust
-
 env:
   global:
-    - PROJECT_NAME=timeline
+  - PROJECT_NAME=timeline
 
 script:
-  - bash ci/script.sh
+- bash ci/script.sh
 
 before_deploy:
-  - bash ci/before_deploy.sh
+- bash ci/before_deploy.sh
+
 
 matrix:
   include:
-    - os: osx
-      env: TARGET=x86_64-apple-darwin
-      rust: stable
-    - os: linux
-      env: TARGET=x86_64-unknown-linux-gnu
-      rust: stable
+  - os: osx
+    env: TARGET=x86_64-apple-darwin
+    rust: stable
+  - os: linux
+    env: TARGET=x86_64-unknown-linux-gnu
+    rust: stable
+
+
+deploy:
+  provider: releases
+  api_key:
+    secure: 0766ZrigXiFxkNr3oB6CnBps+tms8Asy87x4aR2LkK50Fk9adnlTgaDQAYnZkc4HK3rNTcAYvy+L3uZn9UuRW/pRCUlb5R6pbCfWZhfOBse7iOdFdThZoFz52/KAxgqd6/Qb9rmmz6p9tib8hwBba9oQZOlCDv3+hLMnzujJFkYG7HHNMckd464sebBPuFrzol9+7UVdN/fLSrQRyqJec8Kyc/3z1oHoM/BJU46k35WDsrBV4z2t2n2tKc0aynfasp4qSmx3iiL2Bd/uXc1vpNCImWCUIcfARUXyOeDhOr8y1uYYWbyVajwsSgk/ALWGgMOkjrANjKQJ+tXHD+toz/xyclsmFMt2RUTK2YIEBQrqhyIy2FI18LXtOOgW2KMzQ5tr2+F3rQH7UEjEA5hrgR6KlYGrFjDzL1dcJUsUySrmUI7eUmqrtsfOW5uNI4yzXFifxAu4djapTluEn4SLFhcocf3c4jpws8CKYbsk9dQm2E6eUs1X4nm3o/GhEaFmW3vF792wCHe8MNxVQYiBdfymJO0tDjv+0YpJUeu+nq7RQ/v1pnIEb0GSBiaXKcN2f8DM7YTfTNWAjdpWfJB4v3xsgJ7GgZbHL4bNRwdMTIex5fnd2Ew9kTapYe9yF2AIJDAXfxd0vnyBZch0rQIWGNAQQVc6CqOkD6KLGTp63YA=
+  file_glob: true
+  file: ${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}.*
+  on:
+    repo: stevenosloan/timeline
+    tags: true
