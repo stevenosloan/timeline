@@ -2,7 +2,7 @@
 
 set -ex
 
-. $(dirname $0)/utils.sh
+. $(dirname $0)/support.sh
 
 main() {
   cargo build --target $TARGET --release --verbose
