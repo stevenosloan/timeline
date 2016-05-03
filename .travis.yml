@@ -1,6 +1,4 @@
 language: rust
-rust:
-  - stable
 
 env:
   global:
@@ -16,5 +14,7 @@ matrix:
   include:
     - os: osx
       env: TARGET=x86_64-apple-darwin
+      rust: stable
     - os: linux
       env: TARGET=x86_64-unknown-linux-gnu
+      rust: stable
